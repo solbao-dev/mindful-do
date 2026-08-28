@@ -3,15 +3,15 @@ import { supabase } from './supabase';
 import './App.css';
 
 function App() {
-  // 1. 할 일 관련 주머니(상태)
+  // 1. 상태 관리
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState("");
   const [priority, setPriority] = useState("medium");
 
-  // 2. 일기 관련 주머니(상태) 추가 💡
-  const [emotion, setEmotion] = useState(3); // 감정 점수 (1~5점, 기본값 3점)
-  const [diaryContent, setDiaryContent] = useState(""); // 일기 내용
+  const [emotion, setEmotion] = useState(3);
+  const [diaryContent, setDiaryContent] = useState("");
 
+  // 2. 데이터 불러오기
   useEffect(() => {
     fetchTodos();
   }, []);
@@ -26,13 +26,12 @@ function App() {
     else setTodos(data);
   };
 
-  // 할 일 추가
+  // 3. 할 일 추가
   const handleAddTodo = async () => {
     if (!newTodo.trim()) return;
 
     const { data, error } = await supabase
       .from('todos')
-      // 💡 status(상태)를 'pending(진행중)'으로 기본 저장합니다.
       .insert([{ title: newTodo, priority: priority, status: 'pending' }])
       .select();
 
@@ -45,7 +44,7 @@ function App() {
     }
   };
 
-  // 💡 할 일 완료 체크(토글) 기능 추가
+  // 4. 할 일 완료 토글
   const handleToggleTodo = async (id, currentStatus) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
 
@@ -57,21 +56,33 @@ function App() {
     if (error) {
       console.error("상태 업데이트 에러:", error);
     } else {
-      // 화면의 데이터도 업데이트 해줍니다.
       setTodos(todos.map(todo =>
         todo.id === id ? { ...todo, status: newStatus } : todo
       ));
     }
   };
 
-  // 💡 하루 마감 일기 저장 기능 추가
+  // 5. 할 일 삭제
+  const handleDeleteTodo = async (id) => {
+    const { error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("삭제 에러:", error);
+    } else {
+      setTodos(todos.filter(todo => todo.id !== id));
+    }
+  };
+
+  // 6. 일기 저장
   const handleSaveDiary = async () => {
     if (!diaryContent.trim()) {
       alert("일기 내용을 입력해주세요!");
       return;
     }
 
-    // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
     const today = new Date().toISOString().split('T')[0];
 
     const { error } = await supabase
@@ -83,8 +94,8 @@ function App() {
       alert("일기 저장에 실패했습니다.");
     } else {
       alert("오늘 하루도 고생 많으셨습니다! 일기가 저장되었습니다. 🌙");
-      setDiaryContent(""); // 입력창 비우기
-      setEmotion(3); // 감정 초기화
+      setDiaryContent("");
+      setEmotion(3);
     }
   };
 
@@ -117,29 +128,55 @@ function App() {
           <h2>오늘의 할 일</h2>
           <ul className="todo-list">
             {todos.map((todo) => (
-              <li key={todo.id} className="todo-item">
-                {/* 💡 체크박스 추가 */}
-                <input
-                  type="checkbox"
-                  checked={todo.status === 'completed'}
-                  onChange={() => handleToggleTodo(todo.id, todo.status)}
-                />
-                <span style={{
-                  textDecoration: todo.status === 'completed' ? 'line-through' : 'none',
-                  color: todo.status === 'completed' ? 'gray' : 'black',
-                  marginLeft: '10px'
-                }}>
-                  {todo.title}
-                </span>
-                <span className="todo-priority" style={{ marginLeft: 'auto' }}>
-                  {todo.priority === 'high' ? '🔴' : todo.priority === 'medium' ? '🟡' : '🟢'}
-                </span>
+              <li key={todo.id} className="todo-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                {/* 👈 왼쪽 묶음: 체크박스 + 할 일 제목 + 중요도 */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={todo.status === 'completed'}
+                    onChange={() => handleToggleTodo(todo.id, todo.status)}
+                  />
+                  <span style={{
+                    textDecoration: todo.status === 'completed' ? 'line-through' : 'none',
+                    color: todo.status === 'completed' ? 'gray' : 'black',
+                    marginLeft: '10px',
+                    marginRight: '8px' /* 제목과 동그라미 사이 간격 */
+                  }}>
+                    {todo.title}
+                  </span>
+
+                  {/* 💡 중요도 동그라미가 제목 옆으로 왔습니다! */}
+                  <span className="todo-priority" style={{ fontSize: '14px' }}>
+                    {todo.priority === 'high' ? '🔴' : todo.priority === 'medium' ? '🟡' : '🟢'}
+                  </span>
+                </div>
+
+                {/* 👉 오른쪽 묶음: 오직 삭제 버튼(✕)만 남김 */}
+                <div>
+                  <button
+                    onClick={() => handleDeleteTodo(todo.id)}
+                    style={{
+                      cursor: 'pointer',
+                      background: 'none',
+                      border: 'none',
+                      padding: '0',
+                      color: '#cccccc',
+                      fontSize: '16px',
+                      fontWeight: 'bold'
+                    }}
+                    title="삭제"
+                  >
+                    ✕
+                  </button>
+                </div>
+
               </li>
             ))}
           </ul>
         </section>
 
-        {/* --- 3. 하루 마감 일기 영역 (새로 추가됨!) --- */}
+        {/* --- 3. 하루 마감 일기 영역 --- */}
         <section className="diary-section" style={{ marginTop: '40px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
           <h2>🌙 하루 마감하기</h2>
           <div style={{ marginBottom: '10px' }}>
@@ -158,7 +195,10 @@ function App() {
             onChange={(e) => setDiaryContent(e.target.value)}
             style={{ width: '100%', height: '100px', marginBottom: '10px', padding: '10px' }}
           />
-          <button onClick={handleSaveDiary} style={{ width: '100%', padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px' }}>
+          <button
+            onClick={handleSaveDiary}
+            style={{ width: '100%', padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}
+          >
             일기 저장하고 하루 마치기
           </button>
         </section>
