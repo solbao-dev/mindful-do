@@ -43,13 +43,16 @@ function App() {
           <button>추가하기</button>
         </section>
 
-        {/* 3. 할 일 목록 영역 (Read 준비) */}
+        {/* 3. 할 일 목록 영역 (Read 완료) */}
         <section className="list-section">
           <h2>오늘의 할 일</h2>
-          <ul>
-            {/* 나중에 데이터베이스에서 가져온 데이터로 바뀔 부분입니다 */}
-            <li>할 일 예시 1 (감정: 3)</li>
-            <li>할 일 예시 2 (감정: 5)</li>
+          <ul className="todo-list">
+            {todos.map((todo) => (
+              <li key={todo.id} className="todo-item">
+                <span className="todo-title">{todo.title}</span>
+                <span className="todo-emotion">감정 점수: {todo.emotion_score}</span>
+              </li>
+            ))}
           </ul>
         </section>
       </main>
